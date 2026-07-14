@@ -1,0 +1,18 @@
+services:
+  database:
+    image: postgres:17
+    container_name: imdb-postgres
+
+    environment:
+      POSTGRES_DB: imdb_clone
+      POSTGRES_USER: imdb_user
+      POSTGRES_PASSWORD: imdb_password
+
+    ports:
+      - "5432:5432"
+
+    volumes:
+      - imdb_postgres_data:/var/lib/postgresql/data
+
+volumes:
+  imdb_postgres_data:

@@ -1,0 +1,4 @@
+/data
+.venv
+backend/__pycache__
+plan.md
