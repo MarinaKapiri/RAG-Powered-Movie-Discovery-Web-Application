@@ -2,3 +2,14 @@
 .venv
 backend/__pycache__
 plan.md
+
+# Local dependencies
+frontend/node_modules/
+
+# Secrets / local environment
+.env
+.env.*
+
+# Database backups
+*.dump
+*_backup.sql

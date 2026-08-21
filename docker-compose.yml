@@ -1,6 +1,6 @@
 services:
   database:
-    image: postgres:17
+    image: pgvector/pgvector:pg17
     container_name: imdb-postgres
 
     environment:
