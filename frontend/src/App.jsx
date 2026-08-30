@@ -1,6 +1,10 @@
 import { useEffect, useRef, useState } from "react";
 import "./App.css";
 
+const API_BASE_URL =
+  import.meta.env.VITE_API_BASE_URL ??
+  (import.meta.env.DEV ? "http://127.0.0.1:8000" : "");
+
 function App() {
   const [movies, setMovies] = useState([]);
   const [recommendations, setRecommendations] = useState([]);
@@ -42,7 +46,7 @@ function App() {
   }
 
   function loadMovieDetails(movieId) {
-  fetch(`http://127.0.0.1:8000/movies/${movieId}`)
+  fetch(`${API_BASE_URL}/movies/${movieId}`)
     .then((response) => {
       if (!response.ok) {
         throw new Error("Δεν ήταν δυνατή η φόρτωση της ταινίας.");
@@ -59,9 +63,9 @@ function App() {
   }
 
   useEffect(() => {
-    loadMovies("http://127.0.0.1:8000/movies");
+    loadMovies(`${API_BASE_URL}/movies`);
 
-    fetch("http://127.0.0.1:8000/recommendations")
+    fetch(`${API_BASE_URL}/recommendations`)
   .then((response) => response.json())
   .then((data) => setRecommendations(data));
   }, []);
@@ -80,12 +84,12 @@ function App() {
     setSelectedMovie(null);
 
     if (query.trim() === "") {
-      loadMovies("http://127.0.0.1:8000/movies");
+      loadMovies(`${API_BASE_URL}/movies`);
       return;
     }
 
     loadMovies(
-      `http://127.0.0.1:8000/movies/search?q=${encodeURIComponent(query)}`
+      `${API_BASE_URL}/movies/search?q=${encodeURIComponent(query)}`
     );
   }
 
@@ -101,7 +105,7 @@ function App() {
 
     try {
       const response = await fetch(
-        `http://127.0.0.1:8000/ai-search?q=${encodeURIComponent(aiQuery)}`
+        `${API_BASE_URL}/ai-search?q=${encodeURIComponent(aiQuery)}`
       );
 
       if (!response.ok) {
@@ -130,7 +134,7 @@ function App() {
 
     try {
      const response = await fetch(
-       `http://127.0.0.1:8000/semantic-search?q=${encodeURIComponent(semanticQuery)}`
+       `${API_BASE_URL}/semantic-search?q=${encodeURIComponent(semanticQuery)}`
       );
 
       if (!response.ok) {
@@ -159,7 +163,7 @@ function App() {
 
     try {
       const response = await fetch(
-        `http://127.0.0.1:8000/rag-search?q=${encodeURIComponent(ragQuery)}`
+        `${API_BASE_URL}/rag-search?q=${encodeURIComponent(ragQuery)}`
       );
 
       if (!response.ok) {

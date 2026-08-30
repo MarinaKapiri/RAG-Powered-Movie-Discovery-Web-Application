@@ -6,12 +6,28 @@ from fastapi.middleware.cors import CORSMiddleware
 import os
 from openai import OpenAI
 import json
+import re
+from fastapi.staticfiles import StaticFiles
+from fastapi.responses import FileResponse
+from pathlib import Path
 
 app = FastAPI()
+
+FRONTEND_DIST = Path(__file__).resolve().parent.parent / "frontend" / "dist"
+
+app.mount(
+    "/assets",
+    StaticFiles(directory=FRONTEND_DIST / "assets"),
+    name="assets",
+)
 
 openrouter_client = OpenAI(
     base_url="https://openrouter.ai/api/v1",
     api_key=os.environ["OPENROUTER_API_KEY"],
+)
+
+openai_client = OpenAI(
+    api_key=os.environ["OPENAI_API_KEY"],
 )
 
 local_llm_client = OpenAI(
@@ -19,7 +35,7 @@ local_llm_client = OpenAI(
     api_key="ollama",
 )
 
-AI_MODE = "local"  # "local" ή "hosted"
+AI_MODE = os.getenv("AI_MODE", "local").lower()
 
 HOSTED_LLM_MODEL = "google/gemma-4-26b-a4b-it:free"
 LOCAL_LLM_MODEL = "qwen3.5:4b"
@@ -40,8 +56,8 @@ if AI_MODE == "local":
     active_llm_client = local_llm_client
     active_llm_model = LOCAL_LLM_MODEL
 else:
-    active_llm_client = openrouter_client
-    active_llm_model = HOSTED_LLM_MODEL
+    active_llm_client = openai_client
+    active_llm_model = "gpt-5-mini"
 
 app.add_middleware(
     CORSMiddleware,
@@ -52,17 +68,21 @@ app.add_middleware(
 )
 
 DATABASE_CONFIG = {
-    "host": "localhost",
-    "port": 5432,
-    "dbname": "imdb_clone",
-    "user": "imdb_user",
-    "password": "imdb_password",
+    "host": os.getenv("DB_HOST", "localhost"),
+    "port": int(os.getenv("DB_PORT", "5432")),
+    "dbname": os.getenv("DB_NAME", "imdb_clone"),
+    "user": os.getenv("DB_USER", "imdb_user"),
+    "password": os.getenv("DB_PASSWORD", "imdb_password"),
 }
 
 
-@app.get("/")
-def home():
+@app.get("/health")
+def health():
     return {"message": "Το backend λειτουργεί!"}
+
+@app.get("/")
+def serve_frontend():
+    return FileResponse(FRONTEND_DIST / "index.html")
 
 
 @app.get("/movies")
@@ -221,8 +241,8 @@ def get_recommendations():
 
 @app.get("/ai-search")
 def ai_search(q: str):
-    response = openrouter_client.chat.completions.create(
-        model="google/gemma-4-26b-a4b-it:free",
+    response = active_llm_client.chat.completions.create(
+        model=active_llm_model,
         messages=[
             {
                 "role": "system",
@@ -461,12 +481,13 @@ def rag_search(q: str):
         for movie in movies
     )
 
-    rerank_options = {
-        "temperature": 0,
-    }
-
     if AI_MODE == "local":
-        rerank_options["reasoning_effort"] = "none"
+        rerank_options = {
+            "temperature": 0,
+            "reasoning_effort": "none",
+        }
+    else:
+        rerank_options = {}
 
     rerank_response = active_llm_client.chat.completions.create(
         model=active_llm_model,
@@ -514,11 +535,19 @@ def rag_search(q: str):
     print("RERANK CONTENT:", repr(rerank_response.choices[0].message.content))
     print("RERANK MESSAGE:", rerank_response.choices[0].message)
 
-    reranked_data = json.loads(
-        rerank_response.choices[0].message.content
-    )
+    rerank_content = rerank_response.choices[0].message.content
 
-    reranked_ids = reranked_data["ids"]
+    try:
+        reranked_data = json.loads(rerank_content)
+        reranked_ids = reranked_data["ids"]
+    except json.JSONDecodeError:
+        reranked_ids = [
+            int(movie_id)
+            for movie_id in re.findall(r"ID:\s*(\d+)", rerank_content)
+        ]
+
+        if len(reranked_ids) != 10:
+            raise ValueError("Το reranker δεν επέστρεψε 10 έγκυρα movie IDs.")
 
     movies_by_id = {
         movie["id"]: movie

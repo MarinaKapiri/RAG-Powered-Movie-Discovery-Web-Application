@@ -13,3 +13,6 @@ frontend/node_modules/
 # Database backups
 *.dump
 *_backup.sql
+
+__pycache__/
+*.pyc
