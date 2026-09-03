@@ -73,6 +73,7 @@ DATABASE_CONFIG = {
     "dbname": os.getenv("DB_NAME", "imdb_clone"),
     "user": os.getenv("DB_USER", "imdb_user"),
     "password": os.getenv("DB_PASSWORD", "imdb_password"),
+    "sslmode": os.getenv("DB_SSLMODE", "prefer"),
 }
 
 
